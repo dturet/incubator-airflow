@@ -90,7 +90,7 @@ class SLACheckView(BaseView):
         logging.info("execution_date={0} for dag_id={1} with an SLA={2} has due_date={3}"
                      .format(latest_execution_run_date, dag.dag_id, sla_max_duration, sla_due_date))
 
-        if dttm_now > sla_due_date:
+        if (dttm_now - sla_due_date) < timedelta(minutes=50):
           last_dag_run = settings.Session.query(DagRun).filter(
             DagRun.dag_id == dag.dag_id,
             DagRun.execution_date == latest_execution_run_date).first()
@@ -102,8 +102,10 @@ class SLACheckView(BaseView):
               {"dag_id": dag.dag_id,
                "due_date": sla_due_date.isoformat(),
                "execution_date": latest_execution_run_date.isoformat(),
-               "sla_duration": sla_max_duration
-               })
+               "sla_duration": sla_max_duration,
+               "start_date": last_dag_run.start_date.isoformat() if last_dag_run else None
+               }
+            )
 
     logging.info("Found {0} SLA's out of compliance".format(len(violations)))
     return jsonify({"sla_misses": violations})
